@@ -26,12 +26,24 @@
 const NSString *PrefsWallpaperPathKey = @"WallpaperPath";
 
 @implementation DesktopWindow
-- init {
-    NSRect frame = [[NSScreen mainScreen] visibleFrame];
+- initWithFrame:(NSRect)frame forOutput:(NSNumber *)outputKey {
+    NSArray *screens = [NSScreen screens];
+    NSScreen *output = nil;
 
+    for(int i = 0; i < [screens count]; ++i) {
+        NSScreen *s = [screens objectAtIndex:i];
+        if([s key] == outputKey) {
+            output = s;
+            break;
+        }
+    }
+
+    frame.origin = NSZeroPoint;
     self = [super initWithContentRect:frame
-        styleMask:NSBorderlessWindowMask|WLWindowLayerAnchorTop|WLWindowLayerAnchorLeft
-            |WLWindowLayerAnchorRight backing:NSBackingStoreBuffered defer:NO];
+        styleMask:NSBorderlessWindowMask|WLWindowLayerAnchorTop
+            |WLWindowLayerAnchorLeft|WLWindowLayerAnchorRight
+        backing:NSBackingStoreBuffered defer:NO screen:output];
+
 
     _menuBar = [MenuBarWindow new];
     [_contentView addSubview:_menuBar];
