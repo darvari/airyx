@@ -1,5 +1,10 @@
 THISDIR:= ${.CURDIR}
 EXTRA_CXXFLAGS= -I/usr/include/gio-unix-2.0
+.if "${CIRRUS_CI}"
+SHA!= echo ${CIRRUS_CHANGE_IN_REPO}|cut -c1-7|tr '[a-z]' '[A-Z]'
+.else
+SHA!= cd ${.CURDIR} && git log -1|head -1|cut -c8-14|tr '[a-z]' '[A-Z]'
+.endif
 
 all: clean build
 clean:
@@ -19,11 +24,14 @@ DMIHelper: ${.CURDIR}/DMIHelper.c
 build: buildWindowServer DMIHelper buildInstaller #buildDock buildFiler 
 	mkdir -p ${BUILDROOT}/System/Library/CoreServices/
 	mkdir -p ${BUILDROOT}/Applications/Utilities/
+	sed -e 's/RAVYNOS_VERSION/${RAVYNOS_VERSION}/' \
+            -e 's/BUILD_STAMP/${SHA}/' < ${.CURDIR}/SystemVersion.plist.in \
+            >${BUILDROOT}/System/Library/CoreServices/SystemVersion.plist
 	cp -av ${.CURDIR}/WindowServer/WindowServer.app ${BUILDROOT}/System/Library/CoreServices
 	#cp -av ${.CURDIR}/Dock/Dock.app ${BUILDROOT}/System/Library/CoreServices
 	#cp -av ${.CURDIR}/Filer/Filer.app ${BUILDROOT}/System/Library/CoreServices
 	cp -av ${.CURDIR}/Installer/"Install ravynOS.app" ${BUILDROOT}/Applications/Utilities/
-.for f in ${.CURDIR}/askpass ${.CURDIR}/enable_tapping ${.CURDIR}/tpquirk ${.CURDIR}/startDesktop
+.for f in ${.CURDIR}/askpass 
 		cp -fv ${f} ${BUILDROOT}/System/Library/CoreServices/
 		chmod 755 ${BUILDROOT}/System/Library/CoreServices/$$(basename ${f})
 .endfor
@@ -36,6 +44,9 @@ buildInstaller:
 
 buildWindowServer:
 	${MAKE} -C ${.CURDIR}/WindowServer
+	${MAKE} -C ${.CURDIR}/WindowServer/Desktop
+	cp -afv ${.CURDIR}/WindowServer/Desktop/SystemUIServer.app \
+                ${.CURDIR}/WindowServer/WindowServer.app/Contents/Resources/
 
 ${.CURDIR}/Filer:
 	git clone https://github.com/mszoek/Filer.git ${.CURDIR}/Filer

@@ -31,6 +31,7 @@ typedef struct {
     mach_msg_header_t header;
     mach_msg_size_t msgh_descriptor_count;
     mach_msg_port_descriptor_t descriptor;
+    unsigned int pid;
     mach_msg_trailer_t trailer;
 } PortMessage;
 
@@ -52,7 +53,7 @@ typedef union {
     menuBar = nil;
 
     kern_return_t kr;
-    if((kr = bootstrap_check_in(bootstrap_port, SERVICE_NAME, &_servicePort) != KERN_SUCCESS)) {
+    if((kr = bootstrap_check_in(bootstrap_port, SERVICE_NAME, &_servicePort)) != KERN_SUCCESS) {
         NSLog(@"Failed to check-in service: %d", kr);
         return nil;
     }
@@ -71,7 +72,13 @@ typedef union {
             case MSG_ID_PORT:
             {
                 mach_port_t port = msg.portMsg.descriptor.name;
-                // FIXME: save port for menu/PID
+                pid_t pid = msg.portMsg.pid;
+                NSLog(@"receiveMachMessage port=%d pid=%d", port, pid);
+                NSMenu *menu = [menuBar menuForPID:pid];
+                if(menu)
+                    [menuBar setPort:port forMenu:menu];
+                else
+                    NSLog(@"Sequence Error: no menu for PID %d but received a port for it", pid);
                 break;
             }
             case MSG_ID_INLINE:
@@ -97,7 +104,8 @@ typedef union {
     [desktops setObject:desktop forKey:key];
     [desktop setDelegate:self];
     [desktop makeKeyAndOrderFront:nil];
-    menuBar = [desktop menuBar];
+    if([desktop isPrimaryDisplay])
+        menuBar = [desktop menuBar];
 }
 
 - (void)updateBackground {
