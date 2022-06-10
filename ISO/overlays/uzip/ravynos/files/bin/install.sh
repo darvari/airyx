@@ -12,7 +12,7 @@ usage() {
 
 deletePartitions() {
     for part in $(/sbin/gpart list $geom|grep '   index:'|cut -c10-); do
-        echo /sbin/gpart delete -i $part $geom
+        /sbin/gpart delete -i $part $geom
     done
 }
 
@@ -58,7 +58,7 @@ copyFilesystem() {
 /bin/install.sh
 EOT
     echo Filling the pool
-    /usr/bin/cpdup -uIof -X/tmp/excludes / /tmp/pool
+    cd /sysroot; /usr/bin/cpdup -uIof -X/tmp/excludes . /tmp/pool
 
     export BSDINSTALL_CHROOT=/tmp/pool
     /usr/sbin/bsdinstall config

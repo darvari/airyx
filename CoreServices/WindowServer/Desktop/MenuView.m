@@ -21,7 +21,9 @@
  */
 
 #import <AppKit/AppKit.h>
+#import <Foundation/NSPlatform.h>
 #import "desktop.h"
+#import "AboutWindow.h"
 
 @interface NSMenu(private)
 -(NSString *)_name;
@@ -38,38 +40,40 @@
     self = [super initWithFrame:NSMakeRect(0, 0, frame.size.width/2, menuBarHeight)];
     aboutWindow = nil;
 
+    NSMenuItem *item;
     sysMenu = [NSMenu new];
-    [sysMenu addItemWithTitle:@"About This Computer" action:NULL keyEquivalent:@""];
-    [sysMenu addItemWithTitle:@"System Preferences..." action:NULL keyEquivalent:@""];
-    NSMenuItem *item = [sysMenu addItemWithTitle:@"Software Store..." action:NULL keyEquivalent:@""];
-    [item setEnabled:NO];
+    [sysMenu setDelegate:self];
+    [sysMenu setAutoenablesItems:YES];
+    [[sysMenu addItemWithTitle:@"About This Computer" action:@selector(aboutThisComputer:) 
+        keyEquivalent:@""] setTarget:self];
+    [[sysMenu addItemWithTitle:@"System Preferences..." action:NULL keyEquivalent:@""]
+        setTarget:self];
+    [[sysMenu addItemWithTitle:@"Software Store..." action:NULL keyEquivalent:@""] setEnabled:NO];
     [sysMenu addItem:[NSMenuItem separatorItem]];
-    [sysMenu addItemWithTitle:@"Recent Items" action:NULL keyEquivalent:@""];
+    [[sysMenu addItemWithTitle:@"Recent Items" action:NULL keyEquivalent:@""] setTarget:self];
     [sysMenu addItem:[NSMenuItem separatorItem]];
-    item = [sysMenu addItemWithTitle:@"Force Quit..." action:NULL keyEquivalent:@""];
-    [item setEnabled:NO];
+    [[sysMenu addItemWithTitle:@"Force Quit..." action:NULL keyEquivalent:@""] setTarget:self];
     [sysMenu addItem:[NSMenuItem separatorItem]];
-    [sysMenu addItemWithTitle:@"Sleep" action:NULL keyEquivalent:@""];
-    [sysMenu addItemWithTitle:@"Restart..." action:NULL keyEquivalent:@""];
-    [sysMenu addItemWithTitle:@"Shut Down..." action:NULL keyEquivalent:@""];
+    [[sysMenu addItemWithTitle:@"Sleep" action:NULL keyEquivalent:@""] setTarget:self];
+    [[sysMenu addItemWithTitle:@"Restart..." action:NULL keyEquivalent:@""] setTarget:self];
+    [[sysMenu addItemWithTitle:@"Shut Down..." action:NULL keyEquivalent:@""] setTarget:self];
     [sysMenu addItem:[NSMenuItem separatorItem]];
-    [sysMenu addItemWithTitle:@"Lock Screen" action:NULL keyEquivalent:@""];
-    [sysMenu addItemWithTitle:@"Log Out" action:NULL keyEquivalent:@""];
+    [[sysMenu addItemWithTitle:@"Lock Screen" action:NULL keyEquivalent:@""] setTarget:self];
+    [[sysMenu addItemWithTitle:@"Log Out" action:NULL keyEquivalent:@""] setTarget:self];
 
     NSString *ravyn = [[NSBundle mainBundle] pathForResource:@"ravynos-mark-64" ofType:@"png"];
-    NSMenuItem *logoItem = [NSMenuItem new];
     NSImage *logo = [[NSImage alloc] initWithContentsOfFile:ravyn];
+    [logo setScalesWhenResized:YES];
+    [logo setSize:NSMakeSize(16,16)];
+    NSMenu *logoMenu = [NSMenu new];
+    NSMenuItem *logoItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
     [logoItem setImage:logo];
     [logoItem setSubmenu:sysMenu];
-
-    NSMenu *logoMenu = [NSMenu new];
     [logoMenu addItem:logoItem];
 
-    logoMenuView = [[NSMainMenuView alloc] initWithFrame:
-        NSMakeRect(menuBarHPad,menuBarVPad,16,16) menu:logoMenu];
-    [logoMenuView setAutoresizingMask:NSViewMinXMargin|NSViewMinYMargin];
-    [self addSubview:logoMenuView];
-    [logoMenuView setWindow:[self window]];
+    NSRect rect = NSMakeRect(menuBarHPad, 0, 64, menuBarHeight);
+    NSMainMenuView *mv = [[NSMainMenuView alloc] initWithFrame:rect menu:logoMenu];
+    [self addSubview:mv];
 
     [self setNeedsDisplay:YES];
     return self;
@@ -98,26 +102,25 @@
     [self setNeedsDisplay:YES];
 }
 
-- (void)aboutThisComputer {
+- (void)aboutThisComputer:(id)sender {
     if(aboutWindow) {
-        [aboutWindow makeKeyAndOrderFront:nil];
+        [aboutWindow orderFront:nil];
         return;
     }
 
-    aboutWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,600,400)
-        styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
-    [aboutWindow setTitle:@"About This Computer"];
-
-    NSImageView *iv = [[NSImageView alloc] initWithFrame:NSMakeRect(0,0,140,140)];
-    NSString *releaseLogo = [[NSBundle mainBundle] pathForResource:@"ReleaseLogo" ofType:@"tiff"];
-    NSImage *img = [[NSImage alloc] initWithContentsOfFile:releaseLogo];
-    [iv setImage:img];
-    [[aboutWindow contentView] addSubview:iv];
-
-    NSTextView *tv = [[NSTextView alloc] initWithFrame:NSMakeRect(0,0,460,260)];
-    [tv insertText:@"ravynOS Pygmy Marmoset\nVersion: 0.4.0pre3\nSome Computer\nProcessor: 8-core Foo Bar\nMemory: 16GB\nGraphics: CoolGPU 1234 8GB"];
-    [[aboutWindow contentView] addSubview:tv];
+    aboutWindow = [AboutWindow new];
+    [aboutWindow setDelegate:self];
     [aboutWindow makeKeyAndOrderFront:nil];
+}
+
+/* NSWindow delegate */
+- (BOOL)windowShouldClose:(NSWindow *)window {
+    return YES;
+}
+
+- (void)windowWillClose:(NSNotification *)note {
+    if([[note object] isEqual:aboutWindow])
+        aboutWindow = nil;
 }
 
 @end

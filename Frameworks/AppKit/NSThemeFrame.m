@@ -70,8 +70,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         bounds.size.height += cheatSheet;
 
     O2Context *_context = [[self window] cgContext];
-    O2ContextSetGrayStrokeColor(_context, 0.999, 1);
-    O2ContextSetGrayFillColor(_context, 0.999, 1);
+    O2ContextSetGrayStrokeColor(_context, 0.8, 1);
+    O2ContextSetGrayFillColor(_context, 0.8, 1);
 
     // let's round these corners
     float radius = 12;
@@ -97,28 +97,32 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     O2ContextFillPath(_context);
 
     // window controls
-    CGRect button = NSMakeRect(12, _frame.size.height - 26, 16, 16);
+    int diameter = 12;
+    CGRect button = NSMakeRect(10, _frame.size.height - 21, diameter, diameter);
+    _closeButtonRect = button;
     O2ContextSetRGBFillColor(_context, 1, 0, 0, 1);
     O2ContextFillEllipseInRect(_context, button);
     O2ContextSetRGBFillColor(_context, 1, 0.9, 0, 1);
-    button.origin.x += 26;
+    button.origin.x += 22;
+    _miniButtonRect = button;
     O2ContextFillEllipseInRect(_context, button);
     O2ContextSetRGBFillColor(_context, 0, 1, 0, 1);
-    button.origin.x += 26;
+    button.origin.x += 22;
+    _zoomButtonRect = button;
     O2ContextFillEllipseInRect(_context, button);
 
     // title
     NSString *t = [[self window] title];
     if(t) {
         NSDictionary *attrs = @{
-            NSFontAttributeName : [NSFont titleBarFontOfSize:18.0],
+            NSFontAttributeName : [NSFont titleBarFontOfSize:15.0],
             NSForegroundColorAttributeName : [NSColor darkGrayColor]
         };
         NSAttributedString *title = [[NSAttributedString alloc] initWithString:t attributes:attrs];
         NSSize size = [title size];
         NSRect titleRect = NSMakeRect(
             _frame.size.width / 2 - size.width / 2,
-            _frame.size.height - 40 + size.height / 2,
+            _frame.size.height - 30 + size.height / 2,
             _frame.size.width / 2 + size.width / 2,
             _frame.size.height - 4);
         [title drawInRect:titleRect];
@@ -174,11 +178,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)mouseDown:(NSEvent *)event {
-    // FIXME: only if on titlebar or movable by background
-    [[self window] requestMove:event];
+    if([[self window] isMovableByWindowBackground]) {
+        [[self window] requestMove:event];
+        return;
+    }
 
-   if(![[self window] isMovableByWindowBackground])
-    return;
+    // is click in title bar?
+    CGFloat top, left, right, bottom;
+    CGNativeBorderFrameWidthsForStyle([[self window] styleMask], &top, &left, &bottom, &right);
+    NSPoint pos = [event locationInWindow];
+
+    // no - return.
+    if(!(pos.y > (NSMaxY(_frame) - top)))
+        return;
+
+    // did they click a button?
+    if(NSPointInRect(pos, _closeButtonRect))
+        [[self window] performClose:self];
+    else if(NSPointInRect(pos, _miniButtonRect))
+        [[self window] performMiniaturize:self];
+    else if(NSPointInRect(pos, _zoomButtonRect))
+        [[self window] performZoom:self];
+    else
+        [[self window] requestMove:event];
 }
 
 @end
